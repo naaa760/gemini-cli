@@ -217,9 +217,6 @@ export function useCompletion(
             (cmd.name.startsWith(partial) || cmd.altName?.startsWith(partial)),
         );
 
-        // Remove the logic that hides suggestions for exact matches
-        // This ensures help text remains visible even when full command name is typed
-
         const finalSuggestions = potentialSuggestions.map((cmd) => ({
           label: cmd.name,
           value: cmd.name,
