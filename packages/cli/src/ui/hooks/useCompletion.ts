@@ -211,7 +211,7 @@ export function useCompletion(
       // Command/Sub-command Completion
       const commandsToSearch = currentLevel || [];
       if (commandsToSearch.length > 0) {
-        let potentialSuggestions = commandsToSearch.filter(
+        const potentialSuggestions = commandsToSearch.filter(
           (cmd) =>
             cmd.description &&
             (cmd.name.startsWith(partial) || cmd.altName?.startsWith(partial)),
