@@ -15,6 +15,7 @@ import {
   ToolCallConfirmationDetails,
   ToolExecuteConfirmationDetails,
   ToolConfirmationOutcome,
+  Icon,
 } from './tools.js';
 import { Type } from '@google/genai';
 import { SchemaValidator } from '../utils/schemaValidator.js';
@@ -52,6 +53,7 @@ Exit Code: Exit code or \`(none)\` if terminated by signal.
 Signal: Signal number or \`(none)\` if no signal was received.
 Background PIDs: List of background processes started or \`(none)\`.
 Process Group PGID: Process group started or \`(none)\``,
+      Icon.Terminal,
       {
         type: Type.OBJECT,
         properties: {
@@ -320,11 +322,19 @@ Process Group PGID: Process group started or \`(none)\``,
           stdio: ['ignore', 'pipe', 'pipe'],
           // detached: true, // ensure subprocess starts its own process group (esp. in Linux)
           cwd: path.resolve(this.config.getTargetDir(), params.directory || ''),
+          env: {
+            ...process.env,
+            GEMINI_CLI: '1',
+          },
         })
       : spawn('bash', ['-c', command], {
           stdio: ['ignore', 'pipe', 'pipe'],
           detached: true, // ensure subprocess starts its own process group (esp. in Linux)
           cwd: path.resolve(this.config.getTargetDir(), params.directory || ''),
+          env: {
+            ...process.env,
+            GEMINI_CLI: '1',
+          },
         });
 
     let exited = false;
