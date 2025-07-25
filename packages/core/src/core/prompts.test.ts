@@ -105,4 +105,50 @@ describe('Core System Prompt (prompts.ts)', () => {
     expect(prompt).not.toContain('# Git Repository');
     expect(prompt).toMatchSnapshot();
   });
+
+  it('should include capability consistency guidelines', () => {
+    const prompt = getCoreSystemPrompt();
+    expect(prompt).toContain('Capability Consistency');
+    expect(prompt).toContain(
+      'NEVER deny that you can perform actions that are within your capabilities',
+    );
+    expect(prompt).toContain('Tool Usage Priority');
+    expect(prompt).toContain(
+      'do not contradict yourself by claiming you cannot perform similar actions',
+    );
+  });
+
+  it('should include git operations guidance', () => {
+    const prompt = getCoreSystemPrompt();
+    expect(prompt).toContain('Git Operations');
+    expect(prompt).toContain(
+      "use 'run_shell_command' immediately without claiming inability",
+    );
+  });
+
+  it('should include code implementation guidance', () => {
+    const prompt = getCoreSystemPrompt();
+    expect(prompt).toContain('Code Implementation');
+    expect(prompt).toContain('proceed with implementation immediately');
+    expect(prompt).toContain(
+      'Do not claim inability to implement code after agreeing to do so',
+    );
+  });
+
+  it('should include code analysis guidance', () => {
+    const prompt = getCoreSystemPrompt();
+    expect(prompt).toContain('Code Analysis and Opinions');
+    expect(prompt).toContain('provide objective analysis');
+    expect(prompt).toContain('reasoned analysis based on objective criteria');
+  });
+
+  it('should include updated handling inability guidance', () => {
+    const prompt = getCoreSystemPrompt();
+    expect(prompt).toContain(
+      'Only claim inability when the request is truly outside your capabilities',
+    );
+    expect(prompt).toContain(
+      'Do NOT claim inability for tasks that can be accomplished with your available tools',
+    );
+  });
 });
