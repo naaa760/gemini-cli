@@ -319,6 +319,7 @@ describe('useGeminiStream', () => {
       },
       setQuotaErrorOccurred: vi.fn(),
       getQuotaErrorOccurred: vi.fn(() => false),
+      getModel: vi.fn(() => 'gemini-2.5-pro'),
       getContentGeneratorConfig: vi
         .fn()
         .mockReturnValue(contentGeneratorConfig),
@@ -1557,6 +1558,114 @@ describe('useGeminiStream', () => {
           expect.any(Number),
         );
       });
+    });
+
+    it('should reset thought to null when user cancels', async () => {
+      // Mock a stream that yields a thought then gets cancelled
+      mockSendMessageStream.mockReturnValue(
+        (async function* () {
+          yield {
+            type: ServerGeminiEventType.Thought,
+            value: { subject: 'Some thought', description: 'Description' },
+          };
+          yield { type: ServerGeminiEventType.UserCancelled };
+        })(),
+      );
+
+      const { result } = renderHook(() =>
+        useGeminiStream(
+          new MockedGeminiClientClass(mockConfig),
+          [],
+          mockAddItem,
+          mockSetShowHelp,
+          mockConfig,
+          mockOnDebugMessage,
+          mockHandleSlashCommand,
+          false,
+          () => 'vscode' as EditorType,
+          () => {},
+          () => Promise.resolve(),
+          false,
+          () => {},
+        ),
+      );
+
+      // Submit query
+      await act(async () => {
+        await result.current.submitQuery('Test query');
+      });
+
+      // Verify cancellation message was added
+      await waitFor(() => {
+        expect(mockAddItem).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'info',
+            text: 'User cancelled the request.',
+          }),
+          expect.any(Number),
+        );
+      });
+
+      // Verify state is reset to idle
+      expect(result.current.streamingState).toBe(StreamingState.Idle);
+    });
+
+    it('should reset thought to null when there is an error', async () => {
+      // Mock a stream that yields a thought then encounters an error
+      mockSendMessageStream.mockReturnValue(
+        (async function* () {
+          yield {
+            type: ServerGeminiEventType.Thought,
+            value: { subject: 'Some thought', description: 'Description' },
+          };
+          yield {
+            type: ServerGeminiEventType.Error,
+            value: { error: { message: 'Test error' } },
+          };
+        })(),
+      );
+
+      const { result } = renderHook(() =>
+        useGeminiStream(
+          new MockedGeminiClientClass(mockConfig),
+          [],
+          mockAddItem,
+          mockSetShowHelp,
+          mockConfig,
+          mockOnDebugMessage,
+          mockHandleSlashCommand,
+          false,
+          () => 'vscode' as EditorType,
+          () => {},
+          () => Promise.resolve(),
+          false,
+          () => {},
+        ),
+      );
+
+      // Submit query
+      await act(async () => {
+        await result.current.submitQuery('Test query');
+      });
+
+      // Verify error message was added
+      await waitFor(() => {
+        expect(mockAddItem).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+          }),
+          expect.any(Number),
+        );
+      });
+
+      // Verify parseAndFormatApiError was called
+      expect(mockParseAndFormatApiError).toHaveBeenCalledWith(
+        { message: 'Test error' },
+        expect.any(String),
+        undefined,
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+      );
     });
   });
 });
