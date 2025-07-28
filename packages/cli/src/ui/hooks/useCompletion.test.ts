@@ -432,7 +432,7 @@ describe('useCompletion', () => {
         ]);
       });
 
-      it('should NOT provide suggestions for a perfectly typed command that is a leaf node', async () => {
+      it('should provide suggestions for a perfectly typed command that is a leaf node', async () => {
         const slashCommands = [
           {
             name: 'clear',
@@ -449,8 +449,12 @@ describe('useCompletion', () => {
           ),
         );
 
-        expect(result.current.suggestions).toHaveLength(0);
-        expect(result.current.showSuggestions).toBe(false);
+        expect(result.current.suggestions).toHaveLength(1);
+        expect(result.current.suggestions[0].label).toBe('clear');
+        expect(result.current.suggestions[0].description).toBe(
+          'Clear the screen',
+        );
+        expect(result.current.showSuggestions).toBe(true);
       });
 
       it.each([['/?'], ['/usage']])(
@@ -484,7 +488,7 @@ describe('useCompletion', () => {
         },
       );
 
-      it('should not provide suggestions for a fully typed command that has no sub-commands or argument completion', async () => {
+      it('should provide suggestions for a fully typed command that has no sub-commands or argument completion', async () => {
         const slashCommands = [
           {
             name: 'clear',
@@ -500,8 +504,12 @@ describe('useCompletion', () => {
           ),
         );
 
-        expect(result.current.suggestions).toHaveLength(0);
-        expect(result.current.showSuggestions).toBe(false);
+        expect(result.current.suggestions).toHaveLength(1);
+        expect(result.current.suggestions[0].label).toBe('clear');
+        expect(result.current.suggestions[0].description).toBe(
+          'Clear the screen',
+        );
+        expect(result.current.showSuggestions).toBe(true);
       });
 
       it('should not provide suggestions for an unknown command', async () => {
