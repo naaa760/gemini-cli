@@ -15,7 +15,6 @@ import {
   getErrorMessage,
   Config,
   FileDiscoveryService,
-  DEFAULT_FILE_FILTERING_OPTIONS,
 } from '@google/gemini-cli-core';
 import {
   MAX_SUGGESTIONS_TO_SHOW,
@@ -441,8 +440,11 @@ export function useCompletion(
       const fileDiscoveryService = config ? config.getFileService() : null;
       const enableRecursiveSearch =
         config?.getEnableRecursiveFileSearch() ?? true;
-      const filterOptions =
-        config?.getFileFilteringOptions() ?? DEFAULT_FILE_FILTERING_OPTIONS;
+      const filterOptions = {
+        respectGitIgnore: config?.getFileFilteringRespectGitIgnore() ?? true,
+        respectGeminiIgnore:
+          config?.getFileFilteringRespectGeminiIgnore() ?? true,
+      };
 
       try {
         // If there's no slash, or it's the root, do a recursive search from cwd
