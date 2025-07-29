@@ -50,6 +50,7 @@ export const useSlashCommandProcessor = (
   openPrivacyNotice: () => void,
   toggleVimEnabled: () => Promise<boolean>,
   setIsProcessing: (isProcessing: boolean) => void,
+  openResearchDialog: () => void,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[]>([]);
@@ -331,6 +332,9 @@ export const useSlashCommandProcessor = (
                     case 'privacy':
                       openPrivacyNotice();
                       return { type: 'handled' };
+                    case 'research':
+                      openResearchDialog();
+                      return { type: 'handled' };
                     default: {
                       const unhandled: never = result.dialog;
                       throw new Error(
@@ -457,6 +461,7 @@ export const useSlashCommandProcessor = (
       setShellConfirmationRequest,
       setSessionShellAllowlist,
       setIsProcessing,
+      openResearchDialog,
     ],
   );
 

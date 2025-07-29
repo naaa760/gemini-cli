@@ -184,6 +184,12 @@ export interface ConfigParameters {
   summarizeToolOutput?: Record<string, SummarizeToolOutputSettings>;
   ideMode?: boolean;
   ideClient?: IdeClient;
+  researchOptIn?: {
+    enabled?: boolean;
+    email?: string;
+    allowUserResearch?: boolean;
+    allowFeedbackCollection?: boolean;
+  };
 }
 
 export class Config {
@@ -241,6 +247,12 @@ export class Config {
     | Record<string, SummarizeToolOutputSettings>
     | undefined;
   private readonly experimentalAcp: boolean = false;
+  private readonly researchOptIn?: {
+    enabled?: boolean;
+    email?: string;
+    allowUserResearch?: boolean;
+    allowFeedbackCollection?: boolean;
+  };
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -293,6 +305,7 @@ export class Config {
     this.summarizeToolOutput = params.summarizeToolOutput;
     this.ideMode = params.ideMode ?? false;
     this.ideClient = params.ideClient;
+    this.researchOptIn = params.researchOptIn;
 
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
@@ -584,6 +597,17 @@ export class Config {
 
   getIdeClient(): IdeClient | undefined {
     return this.ideClient;
+  }
+
+  getResearchOptIn():
+    | {
+        enabled?: boolean;
+        email?: string;
+        allowUserResearch?: boolean;
+        allowFeedbackCollection?: boolean;
+      }
+    | undefined {
+    return this.researchOptIn;
   }
 
   async getGitService(): Promise<GitService> {
