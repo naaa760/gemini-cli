@@ -62,9 +62,9 @@ export class BuiltinCommandLoader implements ICommandLoader {
       helpCommand,
       ideCommand(this.config),
       initCommand,
+
       memoryCommand,
       privacyCommand,
-      mcpCommand,
       quitCommand,
       researchCommand,
       restoreCommand(this.config),
