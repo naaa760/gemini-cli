@@ -419,30 +419,43 @@ export function useCompletion(
       },
       maxResults = 50,
     ): Promise<Suggestion[]> => {
-      const globPattern = `**/${searchPrefix}*`;
-      const files = await glob(globPattern, {
-        cwd,
-        dot: searchPrefix.startsWith('.'),
-        nocase: true,
-      });
+      // Check if recursive file search is disabled (for remote filesystems)
+      if (config?.getEnableRecursiveFileSearch() === false) {
+        return [];
+      }
 
-      const suggestions: Suggestion[] = files
-        .map((file: string) => ({
-          label: file,
-          value: escapePath(file),
-        }))
-        .filter((s) => {
-          if (fileDiscoveryService) {
-            return !fileDiscoveryService.shouldIgnoreFile(
-              s.label,
-              filterOptions,
-            ); // relative path
-          }
-          return true;
-        })
-        .slice(0, maxResults);
+      try {
+        const files = await glob(`**/${searchPrefix}*`, {
+          cwd,
+          dot: searchPrefix.startsWith('.'),
+          nocase: true,
+        });
 
-      return suggestions;
+        const suggestions: Suggestion[] = files
+          .map((file: string) => ({
+            label: file,
+            value: escapePath(file),
+          }))
+          .filter((s) => {
+            if (fileDiscoveryService) {
+              return !fileDiscoveryService.shouldIgnoreFile(
+                s.label,
+                filterOptions,
+              );
+            }
+            return true;
+          })
+          .slice(0, maxResults);
+
+        return suggestions;
+      } catch (error) {
+        // If we hit an error, return empty results
+        console.debug(
+          `Glob search failed for pattern **/${searchPrefix}*`,
+          error,
+        );
+        return [];
+      }
     };
 
     const fetchSuggestions = async () => {
