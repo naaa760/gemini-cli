@@ -84,6 +84,8 @@ export interface Settings {
     respectGitIgnore?: boolean;
     respectGeminiIgnore?: boolean;
     enableRecursiveFileSearch?: boolean;
+    maxSearchDepth?: number;
+    searchTimeoutMs?: number;
   };
 
   hideWindowTitle?: boolean;
