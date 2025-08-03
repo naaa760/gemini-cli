@@ -25,7 +25,10 @@ export const SETTINGS_DIRECTORY_NAME = '.gemini';
 export const USER_SETTINGS_DIR = path.join(homedir(), SETTINGS_DIRECTORY_NAME);
 export const USER_SETTINGS_PATH = path.join(USER_SETTINGS_DIR, 'settings.json');
 
-function getSystemSettingsPath(): string {
+export function getSystemSettingsPath(): string {
+  if (process.env.GEMINI_CLI_SYSTEM_SETTINGS_PATH) {
+    return process.env.GEMINI_CLI_SYSTEM_SETTINGS_PATH;
+  }
   if (platform() === 'darwin') {
     return '/Library/Application Support/GeminiCli/settings.json';
   } else if (platform() === 'win32') {
@@ -35,7 +38,7 @@ function getSystemSettingsPath(): string {
   }
 }
 
-export const SYSTEM_SETTINGS_PATH = getSystemSettingsPath();
+export type DnsResolutionOrder = 'ipv4first' | 'verbatim';
 
 export enum SettingScope {
   User = 'User',
@@ -59,6 +62,7 @@ export interface Settings {
   theme?: string;
   customThemes?: Record<string, CustomTheme>;
   selectedAuthType?: AuthType;
+  useExternalAuth?: boolean;
   sandbox?: boolean | string;
   coreTools?: string[];
   excludeTools?: string[];
@@ -85,7 +89,6 @@ export interface Settings {
     enableRecursiveFileSearch?: boolean;
   };
 
-  // UI setting. Does not display the ANSI-controlled terminal title.
   hideWindowTitle?: boolean;
 
   hideTips?: boolean;
@@ -97,8 +100,19 @@ export interface Settings {
   // A map of tool names to their summarization settings.
   summarizeToolOutput?: Record<string, SummarizeToolOutputSettings>;
 
-  // Add other settings here.
+  vimMode?: boolean;
+  memoryImportFormat?: 'tree' | 'flat';
+
+  // Flag to be removed post-launch.
+  ideModeFeature?: boolean;
+  /// IDE mode setting configured via slash command toggle.
   ideMode?: boolean;
+
+  // Setting for disabling auto-update.
+  disableAutoUpdate?: boolean;
+
+  memoryDiscoveryMaxDirs?: number;
+  dnsResolutionOrder?: DnsResolutionOrder;
 }
 
 export interface SettingsError {
@@ -297,11 +311,27 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
   let userSettings: Settings = {};
   let workspaceSettings: Settings = {};
   const settingsErrors: SettingsError[] = [];
+  const systemSettingsPath = getSystemSettingsPath();
+
+  // FIX: Resolve paths to their canonical representation to handle symlinks
+  const resolvedWorkspaceDir = path.resolve(workspaceDir);
+  const resolvedHomeDir = path.resolve(homedir());
+
+  let realWorkspaceDir = resolvedWorkspaceDir;
+  try {
+    // fs.realpathSync gets the "true" path, resolving any symlinks
+    realWorkspaceDir = fs.realpathSync(resolvedWorkspaceDir);
+  } catch (_e) {
+    // This is okay. The path might not exist yet, and that's a valid state.
+  }
+
+  // We expect homedir to always exist and be resolvable.
+  const realHomeDir = fs.realpathSync(resolvedHomeDir);
 
   // Load system settings
   try {
-    if (fs.existsSync(SYSTEM_SETTINGS_PATH)) {
-      const systemContent = fs.readFileSync(SYSTEM_SETTINGS_PATH, 'utf-8');
+    if (fs.existsSync(systemSettingsPath)) {
+      const systemContent = fs.readFileSync(systemSettingsPath, 'utf-8');
       const parsedSystemSettings = JSON.parse(
         stripJsonComments(systemContent),
       ) as Settings;
@@ -310,7 +340,7 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
   } catch (error: unknown) {
     settingsErrors.push({
       message: getErrorMessage(error),
-      path: SYSTEM_SETTINGS_PATH,
+      path: systemSettingsPath,
     });
   }
 
@@ -342,33 +372,36 @@ export function loadSettings(workspaceDir: string): LoadedSettings {
     'settings.json',
   );
 
-  // Load workspace settings
-  try {
-    if (fs.existsSync(workspaceSettingsPath)) {
-      const projectContent = fs.readFileSync(workspaceSettingsPath, 'utf-8');
-      const parsedWorkspaceSettings = JSON.parse(
-        stripJsonComments(projectContent),
-      ) as Settings;
-      workspaceSettings = resolveEnvVarsInObject(parsedWorkspaceSettings);
-      if (workspaceSettings.theme && workspaceSettings.theme === 'VS') {
-        workspaceSettings.theme = DefaultLight.name;
-      } else if (
-        workspaceSettings.theme &&
-        workspaceSettings.theme === 'VS2015'
-      ) {
-        workspaceSettings.theme = DefaultDark.name;
+  // This comparison is now much more reliable.
+  if (realWorkspaceDir !== realHomeDir) {
+    // Load workspace settings
+    try {
+      if (fs.existsSync(workspaceSettingsPath)) {
+        const projectContent = fs.readFileSync(workspaceSettingsPath, 'utf-8');
+        const parsedWorkspaceSettings = JSON.parse(
+          stripJsonComments(projectContent),
+        ) as Settings;
+        workspaceSettings = resolveEnvVarsInObject(parsedWorkspaceSettings);
+        if (workspaceSettings.theme && workspaceSettings.theme === 'VS') {
+          workspaceSettings.theme = DefaultLight.name;
+        } else if (
+          workspaceSettings.theme &&
+          workspaceSettings.theme === 'VS2015'
+        ) {
+          workspaceSettings.theme = DefaultDark.name;
+        }
       }
+    } catch (error: unknown) {
+      settingsErrors.push({
+        message: getErrorMessage(error),
+        path: workspaceSettingsPath,
+      });
     }
-  } catch (error: unknown) {
-    settingsErrors.push({
-      message: getErrorMessage(error),
-      path: workspaceSettingsPath,
-    });
   }
 
   return new LoadedSettings(
     {
-      path: SYSTEM_SETTINGS_PATH,
+      path: systemSettingsPath,
       settings: systemSettings,
     },
     {
