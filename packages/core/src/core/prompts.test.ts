@@ -4,9 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getCoreSystemPrompt } from './prompts.js';
 import { isGitRepository } from '../utils/gitUtils.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { GEMINI_CONFIG_DIR } from '../tools/memoryTool.js';
 
 // Mock tool names if they are dynamically generated or complex
 vi.mock('../tools/ls', () => ({ LSTool: { Name: 'list_directory' } }));
@@ -26,8 +30,15 @@ vi.mock('../tools/write-file', () => ({
 vi.mock('../utils/gitUtils', () => ({
   isGitRepository: vi.fn(),
 }));
+vi.mock('node:fs');
 
 describe('Core System Prompt (prompts.ts)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.stubEnv('GEMINI_SYSTEM_MD', undefined);
+    vi.stubEnv('GEMINI_WRITE_SYSTEM_MD', undefined);
+  });
+
   it('should return the base prompt when no userMemory is provided', () => {
     vi.stubEnv('SANDBOX', undefined);
     const prompt = getCoreSystemPrompt();
@@ -67,7 +78,7 @@ describe('Core System Prompt (prompts.ts)', () => {
     vi.stubEnv('SANDBOX', 'true'); // Generic sandbox value
     const prompt = getCoreSystemPrompt();
     expect(prompt).toContain('# Sandbox');
-    expect(prompt).not.toContain('# MacOS Seatbelt');
+    expect(prompt).not.toContain('# macOS Seatbelt');
     expect(prompt).not.toContain('# Outside of Sandbox');
     expect(prompt).toMatchSnapshot();
   });
@@ -75,7 +86,7 @@ describe('Core System Prompt (prompts.ts)', () => {
   it('should include seatbelt-specific instructions when SANDBOX env var is "sandbox-exec"', () => {
     vi.stubEnv('SANDBOX', 'sandbox-exec');
     const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain('# MacOS Seatbelt');
+    expect(prompt).toContain('# macOS Seatbelt');
     expect(prompt).not.toContain('# Sandbox');
     expect(prompt).not.toContain('# Outside of Sandbox');
     expect(prompt).toMatchSnapshot();
@@ -86,7 +97,7 @@ describe('Core System Prompt (prompts.ts)', () => {
     const prompt = getCoreSystemPrompt();
     expect(prompt).toContain('# Outside of Sandbox');
     expect(prompt).not.toContain('# Sandbox');
-    expect(prompt).not.toContain('# MacOS Seatbelt');
+    expect(prompt).not.toContain('# macOS Seatbelt');
     expect(prompt).toMatchSnapshot();
   });
 
@@ -106,49 +117,6 @@ describe('Core System Prompt (prompts.ts)', () => {
     expect(prompt).toMatchSnapshot();
   });
 
-  it('should include capability consistency guidelines', () => {
-    const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain('Capability Consistency');
-    expect(prompt).toContain(
-      'NEVER deny that you can perform actions that are within your capabilities',
-    );
-    expect(prompt).toContain('Tool Usage Priority');
-    expect(prompt).toContain(
-      'do not contradict yourself by claiming you cannot perform similar actions',
-    );
-  });
 
-  it('should include git operations guidance', () => {
-    const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain('Git Operations');
-    expect(prompt).toContain(
-      "use 'run_shell_command' immediately without claiming inability",
-    );
-  });
-
-  it('should include code implementation guidance', () => {
-    const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain('Code Implementation');
-    expect(prompt).toContain('proceed with implementation immediately');
-    expect(prompt).toContain(
-      'Do not claim inability to implement code after agreeing to do so',
-    );
-  });
-
-  it('should include code analysis guidance', () => {
-    const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain('Code Analysis and Opinions');
-    expect(prompt).toContain('provide objective analysis');
-    expect(prompt).toContain('reasoned analysis based on objective criteria');
-  });
-
-  it('should include updated handling inability guidance', () => {
-    const prompt = getCoreSystemPrompt();
-    expect(prompt).toContain(
-      'Only claim inability when the request is truly outside your capabilities',
-    );
-    expect(prompt).toContain(
-      'Do NOT claim inability for tasks that can be accomplished with your available tools',
-    );
   });
 });

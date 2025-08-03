@@ -15,6 +15,7 @@ import {
   ToolEditConfirmationDetails,
   ToolConfirmationOutcome,
   ToolCallConfirmationDetails,
+  Icon,
 } from './tools.js';
 import { Type } from '@google/genai';
 import { SchemaValidator } from '../utils/schemaValidator.js';
@@ -26,7 +27,7 @@ import {
 } from '../utils/editCorrector.js';
 import { DEFAULT_DIFF_OPTIONS } from './diffOptions.js';
 import { ModifiableTool, ModifyContext } from './modifiable-tool.js';
-import { getSpecificMimeType, isWithinRoot } from '../utils/fileUtils.js';
+import { getSpecificMimeType } from '../utils/fileUtils.js';
 import {
   recordFileOperationMetric,
   FileOperation,
@@ -72,9 +73,10 @@ export class WriteFileTool
     super(
       WriteFileTool.Name,
       'WriteFile',
-      `Writes content to a specified file in the local filesystem. 
-      
+      `Writes content to a specified file in the local filesystem.
+
       The user has the ability to modify \`content\`. If modified, this will be stated in the response.`,
+      Icon.Pencil,
       {
         properties: {
           file_path: {
@@ -103,8 +105,11 @@ export class WriteFileTool
     if (!path.isAbsolute(filePath)) {
       return `File path must be absolute: ${filePath}`;
     }
-    if (!isWithinRoot(filePath, this.config.getTargetDir())) {
-      return `File path must be within the root directory (${this.config.getTargetDir()}): ${filePath}`;
+
+    const workspaceContext = this.config.getWorkspaceContext();
+    if (!workspaceContext.isPathWithinWorkspace(filePath)) {
+      const directories = workspaceContext.getDirectories();
+      return `File path must be within one of the workspace directories: ${directories.join(', ')}`;
     }
 
     try {
@@ -184,6 +189,8 @@ export class WriteFileTool
       title: `Confirm Write: ${shortenPath(relativePath)}`,
       fileName,
       fileDiff,
+      originalContent,
+      newContent: correctedContent,
       onConfirm: async (outcome: ToolConfirmationOutcome) => {
         if (outcome === ToolConfirmationOutcome.ProceedAlways) {
           this.config.setApprovalMode(ApprovalMode.AUTO_EDIT);
@@ -269,7 +276,12 @@ export class WriteFileTool
         );
       }
 
-      const displayResult: FileDiff = { fileDiff, fileName };
+      const displayResult: FileDiff = {
+        fileDiff,
+        fileName,
+        originalContent: correctedContentResult.originalContent,
+        newContent: correctedContentResult.correctedContent,
+      };
 
       const lines = fileContent.split('\n').length;
       const mimetype = getSpecificMimeType(params.file_path);
