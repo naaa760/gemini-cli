@@ -1244,4 +1244,27 @@ describe('useCompletion', () => {
       );
     });
   });
+
+  describe('showSuggestions', () => {
+    it('should show suggestions for exact leaf command match', () => {
+      const slashCommands = [
+        {
+          name: 'clear',
+          description: 'Clear the screen',
+        },
+      ] as unknown as SlashCommand[];
+      const { result } = renderHook(() =>
+        useCompletion(
+          useTextBufferForTest('/clear'),
+          testRootDir,
+          slashCommands,
+          mockCommandContext,
+          mockConfig,
+        ),
+      );
+
+      expect(result.current.suggestions).toHaveLength(1);
+      expect(result.current.suggestions[0].label).toBe('clear');
+    });
+  });
 });
