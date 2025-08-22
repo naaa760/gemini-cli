@@ -112,7 +112,6 @@ export function SuggestionsDisplay({
                   ) : null}
                 </>
               )}
-
             </Box>
           </Box>
         );
